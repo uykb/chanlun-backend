@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <title>缠论解盘 - TradingView Chart</title>
+    <link rel="shortcut icon" href="favicon.ico" />
+    <link rel="stylesheet" href="css/layui.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <script type="text/javascript" src="js/config.js"></script>
+    <script type="text/javascript" src="jquery-3.7.0.min.js"></script>
+    <script type="text/javascript" src="layui.js"></script>
+    <script type="text/javascript" src="xm-select.js"></script>
+    <script type="text/javascript" src="marked.min.js"></script>
+    <script type="text/javascript" src="charting_library/charting_library.standalone.js"></script>
+    <script type="text/javascript" src="datafeeds/udf/dist/bundle.js"></script>
+    <script type="text/javascript">
+        (function () {
+            if (window.JSON && window.JSON.parse) {
+                var c = document.getElementsByTagName("head");
+                try {
+                    var b = JSON.parse(localStorage.tv_chart);
+                } catch (d) {
+                    b = {};
+                }
+                if ("dark" === b.theme) {
+                    var a = document.createElement("link");
+                    a.href = "css/layui-theme-dark.css";
+                    a.rel = "stylesheet";
+                    a.id = "layuicss-theme-dark";
+                    c[0].appendChild(a)
+
+                    var b = document.createElement("link");
+                    b.href = "css/xm-select-dark.css";
+                    b.rel = "stylesheet";
+                    b.id = "xmselectcss-theme-dark";
+                    c[0].appendChild(b)
+                }
+            }
+        })();
+    </script>
+    <style>
+        .layui-card-body p,
+        li {
+            color: #999;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="layui-fluid" style="padding: 0">
+        <div class="layui-row">
+            <div class="layui-col-xs10 layui-col-sm10 layui-col-md10" id="chart_container" style="display: flex; flex-direction: column; height: 100vh">
+                <div id="tv_charts_area" style="width: 100%; height: 100%; display: flex; flex-direction: column;"></div>
+            </div>
+            <div class="layui-col-xs2 layui-col-sm2 layui-col-md2" id="chart_menu" style="position: fixed; top: 0; bottom: 0; right: 0; overflow: scroll; padding: 0; margin: 0;">
+                <div style="padding: 10px">
+                    <div class="layui-inline" style="width: 100%">
+                        <h2 style="float: left; margin-top: 9px">缠论解盘</h2>
+                        <div id="toggle-menu" style="float: right; margin-top: 10px; cursor: pointer">
+                            <div><i class="layui-icon layui-icon-shrink-right"></i></div>
+                        </div>
+                    </div>
+                    <hr class="layui-border-red" />
+                    <form class="layui-form layui-form-pane" lay-filter="select_market_form">
+                        <div class="layui-form-item">
+                            <div class="layui-input-block" style="margin: 0; padding: 0">
+                                <label>
+                                    <select name="market" lay-filter="select_market">
+                                        <option value="a">沪深A股</option>
+                                        <option value="hk">港股</option>
+                                        <option value="futures">国内期货</option>
+                                        <option value="ny_futures">纽约期货</option>
+                                        <option value="fx">外汇</option>
+                                        <option value="us">美股</option>
+                                        <option value="currency">数字货币(合约)</option>
+                                        <option value="currency_spot">数字货币(现货)</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="layui-form-item">
+                            <div id="code_search" class="xm-select-demo"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="layui-collapse lay-accordion" lay-filter="collapse-opts">
+                    <div class="layui-colla-item">
+                        <div class="layui-colla-title" data-ca-title="自选组">自选组</div>
+                        <div class="layui-colla-content layui-show" style="padding: 0; position: relative; height: 100%">
+                            <form class="layui-form zixuan-form-bg" style="width: 100%; position: sticky; top: 0; z-index: 10; padding: 5px 0;">
+                                <div class="layui-form-item">
+                                    <div class="layui-inline">
+                                        <div class="layui-input-inline layui-input-wrap" style="width: 60%; float: left">
+                                            <label for="zixuan_groups">
+                                                <select id="zixuan_groups" name="zixuan_groups" lay-filter="select_zx_group"></select>
+                                            </label>
+                                        </div>
+                                        <div class="layui-form-mid" style="padding: 4px 0 !important; float: left">
+                                            <button type="button" id="add_zixuan" class="layui-btn layui-btn-primary layui-border-red layui-btn-sm">
+                                                <i class="layui-icon layui-icon-add-1"></i> 自选
+                                            </button>
+                                        </div>
+                                        <div class="layui-form-mid" style="padding: 4px 0 !important; float: left">
+                                            <button type="button" id="refresh_zixuan" class="layui-btn layui-btn-primary layui-border-red layui-btn-sm">
+                                                <i class="layui-icon layui-icon-refresh"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                            <div style="overflow-y: auto; height: calc(100% - 50px); margin-top: 5px;">
+                                <table class="layui-hide" id="table_zixuan_list" style="width: 100%"></table>
+                            </div>
+                            <hr class="layui-border-red" />
+                        </div>
+                    </div>
+                    <div class="layui-colla-item">
+                        <div class="layui-colla-title" data-ca-title="监控提醒">监控提醒</div>
+                        <div class="layui-colla-content" style="padding: 0">
+                            <form class="layui-form" lay-filter="alert_records_form" style="padding: 10px 10px 0 10px">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">任务名称</label>
+                                    <div class="layui-input-block">
+                                        <select name="task_name_select" id="task_name_select" lay-filter="task_name_select">
+                                            <option value="">全部</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </form>
+                            <table class="layui-hide" id="table_alert_reocrds" lay-filter="table_alert_reocrds"></table>
+                            <hr class="layui-border-red" />
+                        </div>
+                    </div>
+                    <div class="layui-colla-item" id="collapse-bkgn">
+                        <div class="layui-colla-title" data-ca-title="板块概念">板块概念</div>
+                        <div class="layui-colla-content" style="padding: 0">
+                            <form class="layui-form" lay-filter="bkgn_form" style="padding: 10px 10px 0 10px">
+                                <div class="layui-form-item" style="margin-bottom: 5px">
+                                    <div class="layui-input-inline" style="width: 100%">
+                                        <div id="bkgn_xm_select"></div>
+                                    </div>
+                                </div>
+                            </form>
+                            <div style="padding: 10px">
+                                <table class="layui-hide" id="bkgn_table" lay-filter="bkgn_table" style="width: 100%; display: none"></table>
+                            </div>
+                            <hr class="layui-border-red" />
+                        </div>
+                    </div>
+                    <div class="layui-colla-item">
+                        <div class="layui-colla-title" data-ca-title="AI分析助手">AI分析助手</div>
+                        <div class="layui-colla-content" style="padding: 0">
+                            <form class="layui-form" style="width: 100%">
+                                <div class="layui-form-item">
+                                    <div class="layui-inline">
+                                        <div class="layui-input-inline layui-input-wrap" style="width: 40%; float: left">
+                                            <label for="ai_code">
+                                                <input type="text" name="ai_code" id="ai_code" autocomplete="off" readonly="readonly" class="layui-input" />
+                                            </label>
+                                        </div>
+                                        <div class="layui-form-mid" style="width: 30%; padding: 0 !important; float: left">
+                                            <label>
+                                                <select name="ai_frequencys" id="ai_frequencys"></select>
+                                            </label>
+                                        </div>
+                                        <div class="layui-form-mid" style="padding: 4px 0 !important; float: left">
+                                            <button type="button" id="ai_analyse_btn" class="layui-btn layui-btn-primary layui-border-red layui-btn-sm">分析</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                            <table class="layui-hide" id="table_ai_analysis" lay-filter="table_ai_analysis"></table>
+                            <hr class="layui-border-red" />
+                        </div>
+                    </div>
+                    <div class="layui-colla-item">
+                        <div class="layui-colla-title" data-ca-title="关于">关于</div>
+                        <div class="layui-colla-content" style="padding: 0">
+                            <div class="layui-text" style="padding: 16px">
+                                <h3>Chanlun-Pro</h3>
+                                <p>基于缠论的市场行情量化分析工具</p>
+                                <p>
+                                    <a href="https://github.com/yijixiuxin/chanlun-pro" target="_blank">Github 地址</a>
+                                    <a href="https://gitee.com/wang-student/chanlun-pro" target="_blank">Gitee 地址</a>
+                                </p>
+                                <p>项目文档：<a href="https://chanlun-pro.readthedocs.io/" target="_blank">链接</a></p>
+                                <p>
+                                    项目作者<br />
+                                    <img src="imgs/wx.jpg" width="200px" height="260px" alt="" />
+                                </p>
+                            </div>
+                            <hr class="layui-border-red" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="layer-wrapper-alert-task-list" style="display: none">
+        <table class="layui-hide" id="table_alerts" lay-filter="table_alerts"></table>
+    </div>
+
+    <script>
+        var interval_update_rates;
+        var interval_get_alert_records;
+        var market_frequencys = {};
+        var market_default_codes = {};
+
+        var default_vals = {
+            theme: "Light",
+            market: "a",
+            a_interval_1: "1D",
+            a_interval_2: "1D",
+            hk_interval_1: "1D",
+            hk_interval_2: "1D",
+            us_interval_1: "1D",
+            us_interval_2: "1D",
+            fx_interval_1: "1D",
+            fx_interval_2: "1D",
+            futures_interval_1: "1D",
+            futures_interval_2: "1D",
+            ny_futures_interval_1: "1D",
+            ny_futures_interval_2: "1D",
+            currency_interval_1: "1D",
+            currency_interval_2: "1D",
+            currency_spot_interval_1: "1D",
+            currency_spot_interval_2: "1D",
+            chart_layout_type: "single",
+            a_code: "SH.000001",
+            hk_code: "HK.00700",
+            us_code: "US.AAPL",
+            fx_code: "FX.EURUSD",
+            futures_code: "FUTURES.RB2405",
+            ny_futures_code: "NY_FUTURES.GC",
+            currency_code: "CURRENCY.BTC/USDT",
+            currency_spot_code: "CURRENCY_SPOT.BTC/USDT",
+        };
+        var chart_widgets = [];
+
+        function change_chart_ticker(_market, _code) {
+            var market = _market;
+            var code = _code;
+            Utils.set_local_data("market", market);
+            Utils.set_local_data(market + "_code", code);
+            layui.each(chart_widgets, function (i, w) {
+                w.activeChart().setSymbol(market + ":" + code);
+            });
+            ZiXuan.render_zixuan_opts();
+        }
+
+        $.ajax({
+            url: "/api/init_config",
+            success: function(res) {
+                market_frequencys = res.market_frequencys;
+                market_default_codes = res.market_default_codes;
+                for (var m in market_default_codes) {
+                    default_vals[m + "_code"] = market_default_codes[m];
+                }
+                $(function() { start_app(); });
+            },
+            error: function() {
+                console.error("Failed to load config from server");
+                $(function() { start_app(); });
+            }
+        });
+    </script>
+    <script src="js/utils.js"></script>
+    <script src="js/tv_indicators/chart_idx_ama.js"></script>
+    <script src="js/tv_indicators/chart_idx_atr.js"></script>
+    <script src="js/tv_indicators/chart_idx_cdbb.js"></script>
+    <script src="js/tv_indicators/chart_idx_cmcm.js"></script>
+    <script src="js/tv_indicators/chart_idx_demo.js"></script>
+    <script src="js/tv_indicators/chart_idx_fcx.js"></script>
+    <script src="js/tv_indicators/chart_idx_hdly.js"></script>
+    <script src="js/tv_indicators/chart_idx_heima.js"></script>
+    <script src="js/tv_indicators/chart_idx_hlblw.js"></script>
+    <script src="js/tv_indicators/chart_idx_hlftx.js"></script>
+    <script src="js/tv_indicators/chart_idx_kdj.js"></script>
+    <script src="js/tv_indicators/chart_idx_ltqs.js"></script>
+    <script src="js/tv_indicators/chart_idx_ma.js"></script>
+    <script src="js/tv_indicators/chart_idx_macdbl.js"></script>
+    <script src="js/tv_indicators/chart_idx_vegasma.js"></script>
+    <script src="js/tv_indicators/chart_idx_vol.js"></script>
+    <script src="js/tv_indicators/chart_idx_rsx.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/zixuan.js"></script>
+    <script src="js/alert.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/bkgn.js"></script>
+    <script>
+        function start_app() {
+            layui.use(function () {
+                var layer = layui.layer;
+                var element = layui.element;
+                var form = layui.form;
+                var util = layui.util;
+                var dropdown = layui.dropdown;
+
+                dropdown.render({
+                    elem: "#toggle-menu",
+                    data: [
+                        {title: "缠论配置项", templet: '<div><i class="layui-icon layui-icon-set"></i> <span>缠论配置项</span></div>', id: 1},
+                        {title: "自选组管理", templet: '<div><i class="layui-icon layui-icon-templeate-1"></i> <span>自选组管理</span></div>', id: 2},
+                        {title: "监控列表", templet: '<div><i class="layui-icon layui-icon-list"></i> <span>监控列表</span></div>', id: 3},
+                        {title: "新增监控", templet: '<div><i class="layui-icon layui-icon-speaker"></i> <span>新增监控</span></div>', id: 4},
+                        {title: "当前任务", templet: '<div><i class="layui-icon layui-icon-senior"></i> <span>当前任务</span></div>', id: 6},
+                        {title: "切换图表布局", templet: '<div><i class="layui-icon layui-icon-carousel"></i> <span>切换图表布局</span></div>', id: 7, child: [
+                            {title: "布局-单图", id: "single"},
+                            {title: "布局-横向双图", id: "horizontal-2"},
+                            {title: "布局-横向7/3", id: "horizontal-7-3"},
+                            {title: "布局-纵向双图", id: "vertical-2"},
+                            {title: "布局-三图", id: "three"},
+                            {title: "布局-四图", id: "four"},
+                        ]},
+                        {title: "切换主题", templet: '<div><i class="layui-icon layui-icon-engine"></i> <span>切换主题</span></div>', id: 8},
+                        {title: "设置后端地址", templet: '<div><i class="layui-icon layui-icon-website"></i> <span>设置后端地址</span></div>', id: 9},
+                    ],
+                    click: function (item) {
+                        if (item.title === "设置后端地址") {
+                            layer.prompt({title: '请输入后端 API 地址 (例如 https://api.example.com)', value: window.API_BASE_URL}, function(value, index){
+                                window.setBackendUrl(value);
+                                layer.close(index);
+                            });
+                        } else if (item.title === "缠论配置项") {
+                            layer.open({type: 2, title: "缠论配置项变更", area: ["1100px", "90vh"], content: "/get_cl_config/" + Utils.get_market() + "/" + Utils.get_code().replace("/", "__"), anim: 1, fixed: true, shadeClose: true});
+                        } else if (item.title === "自选组管理") {
+                            layer.open({type: 2, title: "自选组管理", area: ["800px", "50vh"], content: "/zixuan_group/" + Utils.get_market(), anim: 1, fixed: true, shadeClose: true});
+                        } else if (item.title === "监控列表") {
+                            layer.open({type: 1, title: "监控列表", area: ["1000px", "50vh"], content: $("#layer-wrapper-alert-task-list"), anim: 1, fixed: true, shadeClose: true, btn: ["刷新"], btn1: function () { Alert.refresh_alerts_table(); }, success: function () { Alert.refresh_alerts_table(); }, end: function () { $("#layer-wrapper-alert-task-list").hide(); }});
+                        } else if (item.title === "新增监控") {
+                            layer.open({type: 2, title: "新增监控提醒", area: ["1000px", "90vh"], content: "/alert_edit/" + Utils.get_market() + "/0", anim: 1, fixed: true, shadeClose: true});
+                        } else if (item.title === "当前任务") {
+                            layer.open({type: 2, title: "当前任务", area: ["1000px", "50vh"], content: "/jobs", anim: 1, fixed: true, shadeClose: true});
+                        } else if (item.title.startsWith("布局-")) {
+                            Utils.set_local_data("chart_layout_type", item.id);
+                            location.reload();
+                        } else if (item.title === "切换主题") {
+                            let theme = Utils.get_local_data("theme");
+                            Utils.set_local_data("theme", theme === "Light" ? "dark" : "Light");
+                            location.reload();
+                        }
+                    }
+                });
+
+                ZiXuan.init_zixuan_opts();
+                element.on("collapse(collapse-opts)", function (data) {
+                    let is_open = data.show;
+                    let ca_title = $(data.title).attr("data-ca-title");
+                    if (ca_title === "自选组") {
+                        if (is_open) interval_update_rates = setInterval(ZiXuan.stocks_update_rate(), 30000);
+                        else clearInterval(interval_update_rates);
+                    }
+                    if (ca_title === "监控提醒") {
+                        if (is_open) {
+                            Alert.init(); Alert.get_alert_records();
+                            interval_get_alert_records = setInterval(Alert.get_alert_records, 60000);
+                        } else clearInterval(interval_get_alert_records);
+                    }
+                    if (ca_title === "板块概念") { if (is_open) BKGN.init_bkgn_opts(); }
+                });
+
+                form.val("select_market_form", { market: Utils.get_market() });
+                form.on("select(select_market)", function (data) {
+                    Utils.set_local_data("market", data.value);
+                    location.reload();
+                });
+
+                Utils.render_fixbar();
+                AI.init_ai_opts();
+                AI.get_ai_analyse_records();
+
+                function init_web() {
+                    if (Utils.get_market() !== "a") $("#collapse-bkgn").hide();
+                    let chart_layout_type = Utils.get_local_data("chart_layout_type") || "single";
+                    let charts_area = $("#tv_charts_area");
+                    charts_area.empty();
+                    let win_height = window.innerHeight;
+                    let chart_configs = [];
+                    if (chart_layout_type === "single") {
+                        chart_configs = [{ id: "1", style: "flex:1;" }];
+                        charts_area.css({ display: "flex", flexDirection: "column" });
+                    } else if (chart_layout_type === "vertical-2") {
+                        chart_configs = [{ id: "1", style: "flex:1;" }, { id: "2", style: "flex:1;" }];
+                        charts_area.css({ display: "flex", flexDirection: "row" });
+                    } else if (chart_layout_type === "horizontal-2") {
+                        chart_configs = [{ id: "1", style: "flex:1;" }, { id: "2", style: "flex:1;" }];
+                        charts_area.css({ display: "flex", flexDirection: "column" });
+                    } else if (chart_layout_type === "three") {
+                        chart_configs = [{ id: "1" }, { id: "2" }, { id: "3" }];
+                        charts_area.css({ display: "flex", flexDirection: "column" });
+                    } else if (chart_layout_type === "horizontal-7-3") {
+                        chart_configs = [{ id: "1" }, { id: "2" }];
+                        charts_area.css({ display: "flex", flexDirection: "column" });
+                    } else if (chart_layout_type === "four") {
+                        chart_configs = [{ id: "1", style: "width:50%;height:50%;float:left;" }, { id: "2", style: "width:50%;height:50%;float:left;" }, { id: "3", style: "width:50%;height:50%;float:left;" }, { id: "4", style: "width:50%;height:50%;float:left;" }];
+                        charts_area.css({ display: "flex", flexDirection: "row", flexWrap: "wrap" });
+                    }
+
+                    chart_widgets = [];
+                    if (chart_layout_type === "horizontal-7-3") {
+                        charts_area.append('<div id="tv_chart_container_1" style="width:100%;height:' + win_height * 0.7 + 'px;"></div>');
+                        charts_area.append('<div id="tv_chart_container_2" style="width:100%;height:' + win_height * 0.3 + 'px;"></div>');
+                        chart_widgets.push(Charts.show_tv_chart("1", win_height * 0.7));
+                        chart_widgets.push(Charts.show_tv_chart("2", win_height * 0.3));
+                    } else if (chart_layout_type === "three") {
+                        let rowDiv = $('<div style="display:flex;width:100%;height:' + win_height / 2 + 'px;"></div>');
+                        rowDiv.append('<div id="tv_chart_container_1" style="flex:1;"></div>');
+                        rowDiv.append('<div id="tv_chart_container_2" style="flex:1;"></div>');
+                        charts_area.append(rowDiv);
+                        charts_area.append('<div id="tv_chart_container_3" style="width:100%;height:' + win_height / 2 + 'px;"></div>');
+                        chart_widgets.push(Charts.show_tv_chart("1", win_height / 2));
+                        chart_widgets.push(Charts.show_tv_chart("2", win_height / 2));
+                        chart_widgets.push(Charts.show_tv_chart("3", win_height / 2));
+                    } else {
+                        chart_configs.forEach(function (cfg) {
+                            charts_area.append('<div id="tv_chart_container_' + cfg.id + '" style="' + (cfg.style || "") + '"></div>');
+                            let chart_height = (chart_layout_type === "single") ? win_height : win_height / 2;
+                            chart_widgets.push(Charts.show_tv_chart(cfg.id, chart_height));
+                        });
+                    }
+                    ZiXuan.render_zixuan_opts();
+                }
+                init_web();
+                interval_update_rates = setInterval(ZiXuan.stocks_update_rate(), 30000);
+            });
+        }
+    </script>
+</body>
+</html>

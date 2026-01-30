@@ -41,8 +41,8 @@ COPY src/ /app/src/
 COPY web/ /app/web/
 COPY package/ /app/package/
 RUN cp src/chanlun/config.py.demo src/chanlun/config.py
-COPY demo_deployment/frontend/ /app/frontend/
-COPY demo_deployment/backend/app_cors.py /app/app_cors.py
+COPY frontend/ /app/frontend/
+COPY app_cors.py /app/app_cors.py
 
 # 安装本地 pytdx
 RUN pip install /app/package/pytdx-1.72r2-py3-none-any.whl
