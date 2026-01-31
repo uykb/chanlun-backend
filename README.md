@@ -96,7 +96,7 @@ The following environment variables can override default settings:
 
 - `WEB_HOST`: Server host (default: `0.0.0.0`).
 - `WEB_PORT`: Server port (default: `5000`).
-- `CORS_ORIGINS`: Allowed CORS origins (comma-separated).
+- `CORS_ORIGINS`: Allowed CORS origins (comma-separated). **Important**: If you deploy the frontend on Vercel, add your Vercel domain here (e.g., `https://your-app.vercel.app`).
 
 ## Project Structure
 
