@@ -1,7 +1,23 @@
 from flask import send_from_directory
 from flask_cors import CORS
-from web.chanlun_chart.cl_app import create_app
 import os
+import shutil
+
+# --- PyArmor 授权文件处理 ---
+# 如果挂载了配置目录，尝试从配置目录加载授权文件
+EXTERNAL_CONFIG_DIR = '/app/config'
+PYARMOR_RUNTIME_DIR = os.path.join(os.path.dirname(__file__), 'src/pyarmor_runtime_005445')
+
+if os.path.exists(EXTERNAL_CONFIG_DIR):
+    for license_file in ['license.lic', '.pyarmor.ikey']:
+        src_license = os.path.join(EXTERNAL_CONFIG_DIR, license_file)
+        if os.path.exists(src_license):
+            print(f"Found license file {license_file} in {EXTERNAL_CONFIG_DIR}, copying to {PYARMOR_RUNTIME_DIR}")
+            shutil.copy(src_license, PYARMOR_RUNTIME_DIR)
+            # 同时拷贝到 src 目录，有些版本可能需要
+            shutil.copy(src_license, os.path.join(os.path.dirname(__file__), 'src'))
+
+from web.chanlun_chart.cl_app import create_app
 
 app = create_app()
 # 允许跨域请求，优先从环境变量读取
