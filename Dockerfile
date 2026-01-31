@@ -41,6 +41,7 @@ COPY src/ /app/src/
 COPY web/ /app/web/
 COPY package/ /app/package/
 RUN cp src/chanlun/config.py.demo src/chanlun/config.py
+RUN mkdir -p /app/config
 COPY frontend/ /app/frontend/
 COPY app_cors.py /app/app_cors.py
 

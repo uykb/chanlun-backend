@@ -29,14 +29,14 @@ Chanlun Backend is the API service for the Chanlun Market Analysis Tool, providi
    docker run -d \
      -p 5000:5000 \
      -v $(pwd)/data:/app/data \
-     -v $(pwd)/config.py:/app/src/chanlun/config.py \
+     -v $(pwd)/config_dir:/app/config \
      --name chanlun-backend \
      chanlun-backend
    ```
 
    - **Port**: The application runs on port 5000 by default.
    - **Data Volume**: Mount a volume to `/app/data` to persist your market data.
-   - **Configuration**: Mount your custom `config.py` to `/app/src/chanlun/config.py`.
+   - **Configuration (Directory Mount)**: If your platform only supports mounting directories (disks), mount a directory to `/app/config` and place your `config.py` file inside that directory. The application will automatically load it.
 
 ### Option 2: Local Installation
 

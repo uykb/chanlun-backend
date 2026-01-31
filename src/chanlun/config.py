@@ -1,11 +1,14 @@
 import pathlib
+import os
+import importlib.util
 
 """
 服务总配置文件
 """
 
-# WEB服务访问IP地址，本机部署设置为 127.0.0.1；局域网或外网部署，设置为该机器的IP地址，或者设置 0.0.0.0 则可使用机器所有IP地址进行访问。
+# --- 默认配置开始 ---
 WEB_HOST = '0.0.0.0'
+# ... (此处省略中间的默认配置代码，实际执行时会保留)
 
 # WEB 登录密码，为空则无需进行登录
 LOGIN_PWD = ''
@@ -163,3 +166,19 @@ def get_data_path():
     if data_path.is_dir() is False:
         data_path.mkdir(parents=True)
     return data_path
+
+# --- 动态加载外部挂载的配置文件 ---
+EXTERNAL_CONFIG_PATH = os.getenv('EXTERNAL_CONFIG_PATH', '/app/config/config.py')
+if os.path.exists(EXTERNAL_CONFIG_PATH):
+    print(f"Loading external config from {EXTERNAL_CONFIG_PATH}")
+    spec = importlib.util.spec_from_file_location("external_config", EXTERNAL_CONFIG_PATH)
+    if spec is not None and spec.loader is not None:
+        ext_config = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(ext_config)
+            # 将外部配置中的变量更新到当前全局命名空间
+            for key in dir(ext_config):
+                if not key.startswith("__"):
+                    globals()[key] = getattr(ext_config, key)
+        except Exception as e:
+            print(f"Error loading external config: {e}")
