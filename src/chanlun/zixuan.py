@@ -25,8 +25,25 @@ class ZiXuan(object):
         zx_groups = db.zx_get_groups(self.market_type)
         if len(zx_groups) == 0:
             db.zx_add_group(self.market_type, "我的关注")
+            self._add_default_stocks("我的关注")
             zx_groups = db.zx_get_groups(self.market_type)
         return [{"name": _g.zx_group} for _g in zx_groups]
+
+    def _add_default_stocks(self, group_name):
+        """
+        添加默认的自选股票
+        """
+        if self.market_type == "currency":
+            self.add_stock(group_name, "BTC/USDT", "Bitcoin")
+            self.add_stock(group_name, "ETH/USDT", "Ethereum")
+            self.add_stock(group_name, "SOL/USDT", "Solana")
+        elif self.market_type == "a":
+            self.add_stock(group_name, "SH.000001", "上证指数")
+        elif self.market_type == "hk":
+            self.add_stock(group_name, "KH.00700", "腾讯控股")
+        elif self.market_type == "us":
+            self.add_stock(group_name, "AAPL", "Apple")
+
 
     def add_zx_group(self, zx_group_name):
         if zx_group_name in ["我的关注"]:
