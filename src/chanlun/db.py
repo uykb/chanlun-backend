@@ -16,9 +16,11 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     func,
+    inspect,
 )
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.orm import declarative_base, sessionmaker
+
 from sqlalchemy.pool import QueuePool
 
 from chanlun import config, fun
@@ -241,11 +243,37 @@ class DB(object):
 
         self.Session = sessionmaker(bind=self.engine)
 
-        Base.metadata.create_all(self.engine)
+        # 检查表是否存在，不存在则创建
+        inspector = inspect(self.engine)
+        existing_tables = inspector.get_table_names()
+        
+        # 获取所有定义的表名
+        defined_tables = [
+            TableByCache.__tablename__,
+            TableByZxGroup.__tablename__,
+            TableByZixuan.__tablename__,
+            TableByAlertTask.__tablename__,
+            TableByAlertRecord.__tablename__,
+            TableByTVMarks.__tablename__,
+            TableByTVMarksPrice.__tablename__,
+            TableByOrder.__tablename__,
+            TableByTVCharts.__tablename__,
+            TableByAIAnalyse.__tablename__,
+        ]
+        
+        # 如果有表不存在，则尝试创建所有表（SQLAlchemy 会自动跳过已存在的）
+        # 但为了避免并发问题，最好还是捕获异常
+        try:
+            Base.metadata.create_all(self.engine)
+        except Exception as e:
+            # 忽略表已存在的错误
+            if "already exists" not in str(e):
+                print(f"Create table error: {e}")
 
         self.__cache_tables = {}
 
     def klines_tables(self, market: str, stock_code: str):
+
         stock_code = (
             stock_code.replace(".", "_")
             .replace("-", "_")
@@ -298,10 +326,15 @@ class DB(object):
             TableByKlines.p = Column(Float, comment="持仓量")
 
         self.__cache_tables[table_name] = TableByKlines
-        Base.metadata.create_all(self.engine)
+        try:
+            Base.metadata.create_all(self.engine)
+        except Exception as e:
+            if "already exists" not in str(e):
+                print(f"Create kline table error: {e}")
         return TableByKlines
 
     def klines_query(
+
         self,
         market: str,
         code: str,
