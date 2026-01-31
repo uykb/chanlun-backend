@@ -37,4 +37,4 @@ openai
 playwright
 
 pyfolio-reloaded
-dtaidistance
+dtaidistanceczsc
